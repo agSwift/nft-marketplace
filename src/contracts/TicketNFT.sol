@@ -1,9 +1,7 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "../contracts/PurchaseToken.sol";
 import "../interfaces/ITicketNFT.sol";
-import "../interfaces/IPrimaryMarket.sol";
 
 contract TicketNFT is ITicketNFT {
     struct TicketHolder {
@@ -13,12 +11,7 @@ contract TicketNFT is ITicketNFT {
 
     uint256 public constant EXPIRY_DURATION = 10 days;
 
-    address public immutable minter;
-    PurchaseToken public immutable paymentToken;
-
-    address public primaryMarket;
-
-    uint256 public nftPrice;
+    address public primaryMarketAddress;
     uint256 public lastTicketID;
 
     mapping(address => uint256) internal _balances;
@@ -47,29 +40,28 @@ contract TicketNFT is ITicketNFT {
     modifier ticketHolderRequired(uint256 ticketID) {
         require(
             _owners[ticketID].holder == msg.sender,
-            "Must be the holder of this ticket"
+            "Only the ticket holder can call this function"
         );
         _;
     }
 
-    constructor(
-        PurchaseToken _paymentToken,
-        uint256 _initialNftPrice,
-        IPrimaryMarket primaryMarket_
-    ) {
-        minter = msg.sender;
-        paymentToken = _paymentToken;
-        primaryMarket = primaryMarket_;
-        nftPrice = _initialNftPrice;
+    modifier primaryMarketRequired() {
+        require(
+            msg.sender == primaryMarketAddress,
+            "Only the primary market can call this function"
+        );
+        _;
+    }
+
+    constructor(address primaryMarketAddress_) {
+        primaryMarketAddress = primaryMarketAddress_;
         lastTicketID = 0;
     }
 
-    function mint(address holder, string memory holderName) external {
-        require(
-            msg.sender == address(primaryMarket),
-            "Only the primary market can mint tickets"
-        );
-
+    function mint(address holder, string memory holderName)
+        external
+        primaryMarketRequired
+    {
         uint256 ticketID = lastTicketID + 1;
 
         _balances[holder] += 1;
@@ -167,8 +159,9 @@ contract TicketNFT is ITicketNFT {
         external
         existsTicketID(ticketID)
         isNotExpiredOrUsed(ticketID)
+        primaryMarketRequired
     {
-         
+        _used[ticketID] = true;
     }
 
     function isExpiredOrUsed(uint256 ticketID)
