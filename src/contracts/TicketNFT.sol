@@ -21,7 +21,7 @@ contract TicketNFT is ITicketNFT {
     mapping(uint256 => bool) internal _used;
     mapping(uint256 => uint256) internal _expiryTimes;
 
-    modifier existsTicketID(uint256 ticketID) {
+    modifier existsTicket(uint256 ticketID) {
         require(
             ticketID > 0 && ticketID <= lastTicketID,
             "Ticket does not exist"
@@ -29,7 +29,7 @@ contract TicketNFT is ITicketNFT {
         _;
     }
 
-    modifier isNotExpiredOrUsed(uint256 ticketID) {
+    modifier isValidTicket(uint256 ticketID) {
         require(
             !this.isExpiredOrUsed(ticketID),
             "Ticket is invalid - has expired or been used"
@@ -80,7 +80,7 @@ contract TicketNFT is ITicketNFT {
     function holderOf(uint256 ticketID)
         external
         view
-        existsTicketID(ticketID)
+        existsTicket(ticketID)
         returns (address)
     {
         return _owners[ticketID].holder;
@@ -90,7 +90,7 @@ contract TicketNFT is ITicketNFT {
         address from,
         address to,
         uint256 ticketID
-    ) external existsTicketID(ticketID) isNotExpiredOrUsed(ticketID) {
+    ) external existsTicket(ticketID) isValidTicket(ticketID) {
         address ticketHolder = _owners[ticketID].holder;
 
         require(
@@ -103,9 +103,8 @@ contract TicketNFT is ITicketNFT {
 
         require(
             ticketHolder == msg.sender ||
-                _isOperatorOfHolder(from, msg.sender) ||
                 this.getApproved(ticketID) == msg.sender,
-            "Unauthorized to transfer this ticket"
+            "Ticket holder or approved address required"
         );
 
         _balances[from] -= 1;
@@ -120,7 +119,7 @@ contract TicketNFT is ITicketNFT {
 
     function approve(address to, uint256 ticketID)
         external
-        existsTicketID(ticketID)
+        existsTicket(ticketID)
         ticketHolderRequired(ticketID)
     {
         address ticketHolder = _owners[ticketID].holder;
@@ -132,7 +131,7 @@ contract TicketNFT is ITicketNFT {
     function getApproved(uint256 ticketID)
         external
         view
-        existsTicketID(ticketID)
+        existsTicket(ticketID)
         returns (address operator)
     {
         return _approvals[ticketID];
@@ -141,7 +140,7 @@ contract TicketNFT is ITicketNFT {
     function holderNameOf(uint256 ticketID)
         external
         view
-        existsTicketID(ticketID)
+        existsTicket(ticketID)
         returns (string memory holderName)
     {
         return _owners[ticketID].name;
@@ -149,7 +148,7 @@ contract TicketNFT is ITicketNFT {
 
     function updateHolderName(uint256 ticketID, string calldata newName)
         external
-        existsTicketID(ticketID)
+        existsTicket(ticketID)
         ticketHolderRequired(ticketID)
     {
         _owners[ticketID].name = newName;
@@ -157,8 +156,8 @@ contract TicketNFT is ITicketNFT {
 
     function setUsed(uint256 ticketID)
         external
-        existsTicketID(ticketID)
-        isNotExpiredOrUsed(ticketID)
+        existsTicket(ticketID)
+        isValidTicket(ticketID)
         primaryMarketRequired
     {
         _used[ticketID] = true;
@@ -167,25 +166,9 @@ contract TicketNFT is ITicketNFT {
     function isExpiredOrUsed(uint256 ticketID)
         external
         view
-        existsTicketID(ticketID)
+        existsTicket(ticketID)
         returns (bool)
     {
         return (block.timestamp > _expiryTimes[ticketID]) || _used[ticketID];
-    }
-
-    function _isOperatorOfHolder(address holder, address operator)
-        internal
-        view
-        returns (bool)
-    {
-        address[] storage userOperators = _operators[holder];
-
-        for (uint256 i = 0; i < userOperators.length; i++) {
-            if (userOperators[i] == operator) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
