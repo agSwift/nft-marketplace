@@ -98,8 +98,8 @@ contract TicketNFT is ITicketNFT {
             "`from` must be the owner of this ticket"
         );
 
-        require(from != address(0), "`from` must not be the zero address");
-        require(to != address(0), "`to` must not be the zero address");
+        require(from != address(0), "`from` cannot be the zero address");
+        require(to != address(0), "`to` cannot be the zero address");
 
         require(
             ticketHolder == msg.sender ||

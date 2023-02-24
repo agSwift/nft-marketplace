@@ -89,8 +89,8 @@ contract SecondaryMarket is ISecondaryMarket {
         );
 
         ticketNFT.transferFrom(address(this), msg.sender, ticketID);
+        
         delete ticketListings[ticketID];
-
         emit Delisting(ticketID);
     }
 }
