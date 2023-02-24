@@ -2,6 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "../interfaces/ITicketNFT.sol";
+import "../interfaces/IPrimaryMarket.sol";
 
 contract TicketNFT is ITicketNFT {
     struct TicketHolder {
@@ -11,12 +12,11 @@ contract TicketNFT is ITicketNFT {
 
     uint256 public constant EXPIRY_DURATION = 10 days;
 
-    address public primaryMarketAddress;
+    IPrimaryMarket public primaryMarket;
     uint256 public lastTicketID;
 
     mapping(address => uint256) internal _balances;
     mapping(uint256 => TicketHolder) internal _owners;
-    mapping(address => address[]) internal _operators;
     mapping(uint256 => address) internal _approvals;
     mapping(uint256 => bool) internal _used;
     mapping(uint256 => uint256) internal _expiryTimes;
@@ -47,14 +47,14 @@ contract TicketNFT is ITicketNFT {
 
     modifier primaryMarketRequired() {
         require(
-            msg.sender == primaryMarketAddress,
+            msg.sender == address(primaryMarket),
             "Only the primary market can call this function"
         );
         _;
     }
 
-    constructor(address primaryMarketAddress_) {
-        primaryMarketAddress = primaryMarketAddress_;
+    constructor(address primaryMarketAddress) {
+        primaryMarket = IPrimaryMarket(primaryMarketAddress);
         lastTicketID = 0;
     }
 
@@ -98,8 +98,9 @@ contract TicketNFT is ITicketNFT {
             "`from` must be the owner of this ticket"
         );
 
-        require(from != address(0), "`from` cannot be the zero address");
-        require(to != address(0), "`to` cannot be the zero address");
+        require(from != to, "`from` and `to` must not be the same address");
+        require(from != address(0), "`from` must not be the zero address");
+        require(to != address(0), "`to` must not be the zero address");
 
         require(
             ticketHolder == msg.sender ||
@@ -158,8 +159,12 @@ contract TicketNFT is ITicketNFT {
         external
         existsTicket(ticketID)
         isValidTicket(ticketID)
-        primaryMarketRequired
     {
+        require(
+            msg.sender == primaryMarket.admin(),
+            "Only the primary market admin can call this function"
+        );
+
         _used[ticketID] = true;
     }
 
