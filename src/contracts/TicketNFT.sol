@@ -32,7 +32,7 @@ contract TicketNFT is ITicketNFT {
     modifier isValidTicket(uint256 ticketID) {
         require(
             !this.isExpiredOrUsed(ticketID),
-            "Ticket is invalid - has expired or been used"
+            "Ticket is invalid - has expired or already been used"
         );
         _;
     }

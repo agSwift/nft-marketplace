@@ -132,14 +132,14 @@ contract TransferTicketNFTTest is BaseTicketNFTTest {
 
     function testTransferWithExpiredTicket() public {
         vm.warp(10 days + 1 minutes);
-        vm.expectRevert("Ticket is invalid - has expired or been used");
+        vm.expectRevert("Ticket is invalid - has expired or already been used");
         ticketNFT.transferFrom(alice, bob, 1);
     }
 
     function testTransferWithUsedTicket() public {
         vm.prank(primaryMarketAdmin);
         ticketNFT.setUsed(1);
-        vm.expectRevert("Ticket is invalid - has expired or been used");
+        vm.expectRevert("Ticket is invalid - has expired or already been used");
         ticketNFT.transferFrom(alice, bob, 1);
     }
 
@@ -197,5 +197,134 @@ contract TransferTicketNFTTest is BaseTicketNFTTest {
         assertEq(ticketNFT.balanceOf(alice), 0);
         assertEq(ticketNFT.balanceOf(bob), 1);
         assertEq(ticketNFT.holderOf(1), bob);
+    }
+}
+
+contract ApproveTicketNFTTest is BaseTicketNFTTest {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(address(primaryMarket));
+        ticketNFT.mint(alice, "alice");
+    }
+
+    function testApproveWithNotExistsTicket() public {
+        vm.expectRevert("Ticket does not exist");
+        ticketNFT.approve(bob, 10);
+    }
+
+    function testApproveNotHolder() public {
+        vm.expectRevert("Only the ticket holder can call this function");
+        ticketNFT.approve(bob, 1);
+    }
+
+    function testApproveAsHolder() public {
+        vm.prank(alice);
+        vm.expectEmit(true, true, true, false);
+        emit Approval(alice, bob, 1);
+
+        ticketNFT.approve(bob, 1);
+
+        assertEq(ticketNFT.getApproved(1), bob);
+    }
+}
+
+contract UpdateHolderNameNFTTest is BaseTicketNFTTest {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(address(primaryMarket));
+        ticketNFT.mint(alice, "alice");
+    }
+
+    function testUpdateHolderNameWithNotExistsTicket() public {
+        vm.expectRevert("Ticket does not exist");
+        ticketNFT.updateHolderName(10, "bob");
+    }
+
+    function testUpdateHolderNameNotHolder() public {
+        vm.expectRevert("Only the ticket holder can call this function");
+        ticketNFT.updateHolderName(1, "bob");
+    }
+
+    function testUpdateHolderNameAsHolder() public {
+        vm.prank(alice);
+        ticketNFT.updateHolderName(1, "newName");
+
+        assertEq(ticketNFT.holderNameOf(1), "newName");
+    }
+}
+
+contract SetUsedNFTTest is BaseTicketNFTTest {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(address(primaryMarket));
+        ticketNFT.mint(alice, "alice");
+    }
+
+    function testSetUsedWithNotExistsTicket() public {
+        vm.expectRevert("Ticket does not exist");
+        ticketNFT.setUsed(10);
+    }
+
+    function testSetUsedWithExpiredTicket() public {
+        vm.warp(10 days + 1 minutes);
+        vm.expectRevert("Ticket is invalid - has expired or already been used");
+        ticketNFT.setUsed(1);
+    }
+
+    function testSetUsedWithUsedTicket() public {
+        vm.startPrank(primaryMarketAdmin);
+        ticketNFT.setUsed(1);
+
+        vm.expectRevert("Ticket is invalid - has expired or already been used");
+        ticketNFT.setUsed(1);
+
+        vm.stopPrank();
+    }
+
+    function testSetUsedAsNonPrimaryMarketAdmin() public {
+        vm.expectRevert("Only the primary market admin can call this function");
+        ticketNFT.setUsed(1);
+    }
+
+    function testSetUsedAsPrimaryMarketAdmin() public {
+        vm.startPrank(primaryMarketAdmin);
+        ticketNFT.setUsed(1);
+
+        assertTrue(ticketNFT.isExpiredOrUsed(1));
+    }
+}
+
+contract IsExpiredOrUsedNFTTest is BaseTicketNFTTest {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(address(primaryMarket));
+        ticketNFT.mint(alice, "alice");
+    }
+
+    function testIsExpiredOrUsedWithNotExistsTicket() public {
+        vm.expectRevert("Ticket does not exist");
+        ticketNFT.isExpiredOrUsed(10);
+    }
+
+    function testIsExpiredOrUsedWithExpiredTicket() public {
+        vm.warp(10 days + 1 minutes);
+        assertTrue(ticketNFT.isExpiredOrUsed(1));
+    }
+
+    function testIsExpiredOrUsedWithUsedTicket() public {
+        vm.startPrank(primaryMarketAdmin);
+        ticketNFT.setUsed(1);
+
+        assertTrue(ticketNFT.isExpiredOrUsed(1));
+
+        vm.stopPrank();
+    }
+
+    function testIsExpiredOrUsedWithValidTicket() public {
+        assertFalse(ticketNFT.isExpiredOrUsed(1));
     }
 }
