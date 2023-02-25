@@ -5,4 +5,4 @@ It contains [the interfaces](./src/interfaces) of the contracts implemented and 
 
 The repository uses [Foundry](https://book.getfoundry.sh/projects/working-on-an-existing-project).
 
-100% test coverage has been achieved.
+**100% test coverage has been achieved.**
