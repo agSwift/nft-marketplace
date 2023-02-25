@@ -3,7 +3,6 @@ pragma solidity ^0.8.10;
 
 import "../interfaces/IPrimaryMarket.sol";
 import "../interfaces/IERC20.sol";
-import "../interfaces/ITicketNFT.sol";
 import "../contracts/TicketNFT.sol";
 
 contract PrimaryMarket is IPrimaryMarket {

@@ -3,15 +3,11 @@ pragma solidity ^0.8.10;
 
 import "forge-std/Test.sol";
 
-import "../src/interfaces/IERC20.sol";
-import "../src/interfaces/ITicketNFT.sol";
-import "../src/interfaces/IPrimaryMarket.sol";
-
 import "../src/contracts/PrimaryMarket.sol";
 import "../src/contracts/PurchaseToken.sol";
 import "../src/contracts/TicketNFT.sol";
 
-contract BasePrimaryMarketTest is Test {
+contract PrimaryMarketTest is Test {
     event Purchase(address indexed holder, string indexed holderName);
 
     uint256 public constant MAX_NUM_TICKETS = 1000;
