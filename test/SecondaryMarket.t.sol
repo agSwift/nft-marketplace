@@ -11,7 +11,7 @@ import "../src/contracts/TicketNFT.sol";
 contract BaseSecondaryMarketTest is Test {
     struct TicketListingInfo {
         uint256 price;
-        address seller;
+        address holder;
     }
 
     event Listing(
@@ -32,7 +32,7 @@ contract BaseSecondaryMarketTest is Test {
     uint256 public constant EXPIRY_DURATION = 10 days;
     uint256 public constant TICKET_PRICE = 100e18;
     uint256 public constant FEE_PERCENT = 5;
-    uint256 public constant LIST_PRICE = 10 ether;
+    uint256 public constant LIST_PRICE = 3 ether;
 
     TicketNFT public ticketNFT;
     PurchaseToken public purchaseToken;
@@ -42,6 +42,7 @@ contract BaseSecondaryMarketTest is Test {
     address public primaryMarketAdmin = makeAddr("primaryMarketAdmin");
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
+    address approved = makeAddr("approved");
 
     function setUp() public virtual {
         purchaseToken = new PurchaseToken();
@@ -110,7 +111,7 @@ contract ListTicketSecondaryMarketTest is BaseSecondaryMarketTest {
 
         assertEq(ticketNFT.holderOf(1), address(secondaryMarket));
         assertEq(secondaryMarket.getListingInfo(1).price, LIST_PRICE);
-        assertEq(secondaryMarket.getListingInfo(1).seller, alice);
+        assertEq(secondaryMarket.getListingInfo(1).holder, alice);
 
         vm.stopPrank();
     }
@@ -173,12 +174,67 @@ contract PurchaseSecondaryMarketTest is BaseSecondaryMarketTest {
         assertEq(ticketNFT.holderOf(1), bob);
         assertEq(ticketNFT.holderNameOf(1), "bob");
         assertEq(secondaryMarket.getListingInfo(1).price, 0);
-        assertEq(secondaryMarket.getListingInfo(1).seller, address(0));
+        assertEq(secondaryMarket.getListingInfo(1).holder, address(0));
         assertEq(purchaseToken.balanceOf(bob), bobStartBalance - LIST_PRICE);
         assertEq(
             purchaseToken.balanceOf(primaryMarketAdmin),
             primaryMarketAdminStartBalance + ((LIST_PRICE * FEE_PERCENT) / 100)
         );
+
+        vm.stopPrank();
+    }
+}
+
+contract DelistTicketSecondaryMarketTest is BaseSecondaryMarketTest {
+    function setUp() public override {
+        super.setUp();
+
+        _buyTicket(alice, "alice");
+
+        vm.startPrank(alice);
+        ticketNFT.approve(approved, 1);
+
+        ticketNFT.approve(address(secondaryMarket), 1);
+        secondaryMarket.listTicket(1, LIST_PRICE);
+
+        vm.stopPrank();
+    }
+
+    function testDelistTicketNotListed() public {
+        _buyTicket(bob, "bob");
+
+        vm.prank(alice);
+        vm.expectRevert("Ticket is not listed");
+        secondaryMarket.delistTicket(2);
+    }
+
+    function testDelistTicketNotExists() public {
+        vm.prank(alice);
+        vm.expectRevert("Ticket is not listed");
+        secondaryMarket.delistTicket(2);
+    }
+
+    function testDelistNotHolder() public {
+        vm.prank(bob);
+        vm.expectRevert("Must be the holder to delist this ticket");
+        secondaryMarket.delistTicket(1);
+    }
+
+    function testDelistApproved() public {
+        vm.prank(approved);
+        vm.expectRevert("Must be the holder to delist this ticket");
+        secondaryMarket.delistTicket(1);
+    }
+
+    function testDelistTicket() public {
+        vm.startPrank(alice);
+        vm.expectEmit(true, false, false, false);
+        emit Delisting(1);
+        secondaryMarket.delistTicket(1);
+
+        assertEq(ticketNFT.holderOf(1), alice);
+        assertEq(secondaryMarket.getListingInfo(1).price, 0);
+        assertEq(secondaryMarket.getListingInfo(1).holder, address(0));
 
         vm.stopPrank();
     }

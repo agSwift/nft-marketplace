@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 
 import "../src/contracts/PrimaryMarket.sol";
 import "../src/contracts/PurchaseToken.sol";
-import "../src/contracts/TicketNFT.sol";
 
 contract PrimaryMarketTest is Test {
     event Purchase(address indexed holder, string indexed holderName);

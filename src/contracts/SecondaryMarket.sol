@@ -9,7 +9,7 @@ import "../interfaces/IERC20.sol";
 contract SecondaryMarket is ISecondaryMarket {
     struct TicketListingInfo {
         uint256 price;
-        address seller;
+        address holder;
     }
 
     uint256 public constant FEE_PERCENT = 5;
@@ -29,7 +29,11 @@ contract SecondaryMarket is ISecondaryMarket {
     }
 
     modifier isListedTicket(uint256 ticketID) {
-        require(_ticketListings[ticketID].price > 0, "Ticket is not listed");
+        require(
+            _ticketListings[ticketID].price > 0 &&
+                _ticketListings[ticketID].holder != address(0),
+            "Ticket is not listed"
+        );
         _;
     }
 
@@ -66,7 +70,7 @@ contract SecondaryMarket is ISecondaryMarket {
 
         purchaseToken.transferFrom(
             msg.sender,
-            listingInfo.seller,
+            listingInfo.holder,
             sellerAmount
         );
         purchaseToken.transferFrom(msg.sender, primaryMarket.admin(), fee);
@@ -80,8 +84,8 @@ contract SecondaryMarket is ISecondaryMarket {
 
     function delistTicket(uint256 ticketID) external isListedTicket(ticketID) {
         require(
-            _ticketListings[ticketID].seller == msg.sender,
-            "Must be the seller to delist this ticket"
+            _ticketListings[ticketID].holder == msg.sender,
+            "Must be the holder to delist this ticket"
         );
 
         ticketNFT.transferFrom(address(this), msg.sender, ticketID);
