@@ -42,7 +42,7 @@ contract BaseSecondaryMarketTest is Test {
     address public primaryMarketAdmin = makeAddr("primaryMarketAdmin");
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
-    address approved = makeAddr("approved");
+    address public approved = makeAddr("approved");
 
     function setUp() public virtual {
         purchaseToken = new PurchaseToken();
@@ -60,6 +60,17 @@ contract BaseSecondaryMarketTest is Test {
         purchaseToken.mint{value: TICKET_PRICE}();
         purchaseToken.approve(address(primaryMarket), TICKET_PRICE);
         primaryMarket.purchase(name);
+        vm.stopPrank();
+    }
+
+    function _listTicketOnSecondary(
+        address holder,
+        uint256 ticketID,
+        uint256 listPrice
+    ) internal {
+        vm.startPrank(holder);
+        ticketNFT.approve(address(secondaryMarket), ticketID);
+        secondaryMarket.listTicket(1, listPrice);
         vm.stopPrank();
     }
 }
@@ -121,12 +132,7 @@ contract PurchaseSecondaryMarketTest is BaseSecondaryMarketTest {
     function setUp() public override {
         super.setUp();
         _buyTicket(alice, "alice");
-
-        // Alice lists the ticket on the SecondaryMarket.
-        vm.startPrank(alice);
-        ticketNFT.approve(address(secondaryMarket), 1);
-        secondaryMarket.listTicket(1, LIST_PRICE);
-        vm.stopPrank();
+        _listTicketOnSecondary(alice, 1, LIST_PRICE);
     }
 
     function testPurchaseTicketExpired() public {
@@ -191,13 +197,10 @@ contract DelistTicketSecondaryMarketTest is BaseSecondaryMarketTest {
 
         _buyTicket(alice, "alice");
 
-        vm.startPrank(alice);
+        vm.prank(alice);
         ticketNFT.approve(approved, 1);
 
-        ticketNFT.approve(address(secondaryMarket), 1);
-        secondaryMarket.listTicket(1, LIST_PRICE);
-
-        vm.stopPrank();
+        _listTicketOnSecondary(alice, 1, LIST_PRICE);
     }
 
     function testDelistTicketNotListed() public {
