@@ -14,7 +14,7 @@ contract PrimaryMarket is IPrimaryMarket {
 
     address public _admin;
     IERC20 public _purchaseToken;
-    ITicketNFT public _ticketNFT;
+    TicketNFT public _ticketNFT;
 
     constructor(address admin_, IERC20 purchaseToken) {
         _admin = admin_;
