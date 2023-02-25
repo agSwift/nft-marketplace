@@ -8,7 +8,12 @@ import "../src/contracts/SecondaryMarket.sol";
 import "../src/contracts/PurchaseToken.sol";
 import "../src/contracts/TicketNFT.sol";
 
-contract SecondaryMarketTest is Test {
+contract BaseSecondaryMarketTest is Test {
+    struct TicketListingInfo {
+        uint256 price;
+        address seller;
+    }
+
     event Listing(
         uint256 indexed ticketID,
         address indexed holder,
@@ -24,6 +29,7 @@ contract SecondaryMarketTest is Test {
 
     event Delisting(uint256 indexed ticketID);
 
+    uint256 public constant EXPIRY_DURATION = 10 days;
     uint256 public constant TICKET_PRICE = 100e18;
 
     TicketNFT public ticketNFT;
@@ -35,51 +41,73 @@ contract SecondaryMarketTest is Test {
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
 
-    function setUp() public {
+    function setUp() public virtual {
         purchaseToken = new PurchaseToken();
         primaryMarket = new PrimaryMarket(primaryMarketAdmin, purchaseToken);
-        ticketNFT = new TicketNFT(address(primaryMarket));
+        ticketNFT = primaryMarket._ticketNFT();
 
-        secondaryMarket = new SecondaryMarket(
-            ticketNFT,
-            purchaseToken,
-            primaryMarket
-        );
+        secondaryMarket = new SecondaryMarket(purchaseToken, primaryMarket);
 
         vm.deal(alice, 1_000_000 ether);
         vm.deal(bob, 1_000_000 ether);
     }
+}
 
-    // function _buyTicket(address holder, string memory holderName) internal {
-    //     vm.startPrank(holder);
+contract ListTicketSecondaryMarketTest is BaseSecondaryMarketTest {
+    function setUp() public override {
+        super.setUp();
 
-    //     purchaseToken.mint{value: TICKET_PRICE}();
-    //     purchaseToken.approve(address(primaryMarket), TICKET_PRICE);
-    //     primaryMarket.purchase(holderName);
-
-    //     vm.stopPrank();
-    // }
-
-    function testListTicketNotExists() public {
-        vm.expectRevert("Ticket does not exist");
-        secondaryMarket.listTicket(10, 1);
-    }
-
-    function testListTicketNotHolder() public {
-
-
+        // Buy a ticket for Alice.
         vm.startPrank(alice);
         purchaseToken.mint{value: TICKET_PRICE}();
         purchaseToken.approve(address(primaryMarket), TICKET_PRICE);
         primaryMarket.purchase("alice");
         vm.stopPrank();
+    }
 
+    function testListTicketExpired() public {
+        vm.warp(EXPIRY_DURATION + 1 minutes);
+        vm.expectRevert("Ticket is invalid - has expired or been used");
+        secondaryMarket.listTicket(1, 10 ether);
+    }
+
+    function testListTicketUsed() public {
+        vm.prank(primaryMarketAdmin);
+        ticketNFT.setUsed(1);
+
+        vm.expectRevert("Ticket is invalid - has expired or been used");
+        secondaryMarket.listTicket(1, 10 ether);
+    }
+
+    function testListTicketNotHolder() public {
         vm.prank(bob);
         vm.expectRevert("Must be the holder to list this ticket");
+        secondaryMarket.listTicket(1, 10 ether);
+    }
 
-        // purchaseToken.mint{value: TICKET_PRICE}();
-        // purchaseToken.approve(address(secondaryMarket), TICKET_PRICE);
+    function testListTicketApproved() public {
+        address approved = makeAddr("approved");
 
-        secondaryMarket.listTicket(1, 100 ether);
+        vm.prank(alice);
+        ticketNFT.approve(approved, 1);
+
+        vm.prank(approved);
+        vm.expectRevert("Must be the holder to list this ticket");
+        secondaryMarket.listTicket(1, 10 ether);
+    }
+
+    function testListTicket() public {
+        vm.startPrank(alice);
+        ticketNFT.approve(address(secondaryMarket), 1);
+
+        vm.expectEmit(true, true, false, true);
+        emit Listing(1, alice, 10 ether);
+        secondaryMarket.listTicket(1, 10 ether);
+
+        assertEq(ticketNFT.holderOf(1), address(secondaryMarket));
+        assertEq(secondaryMarket.getListingInfo(1).price, 10 ether);
+        assertEq(secondaryMarket.getListingInfo(1).seller, alice);
+
+        vm.stopPrank();
     }
 }

@@ -24,6 +24,8 @@ contract BaseTicketNFTTest is Test {
         uint256 indexed ticketID
     );
 
+    uint256 public constant EXPIRY_DURATION = 10 days;
+
     IERC20 public purchaseToken;
     IPrimaryMarket public primaryMarket;
     ITicketNFT public ticketNFT;
@@ -131,7 +133,7 @@ contract TransferTicketNFTTest is BaseTicketNFTTest {
     }
 
     function testTransferWithExpiredTicket() public {
-        vm.warp(10 days + 1 minutes);
+        vm.warp(EXPIRY_DURATION + 1 minutes);
         vm.expectRevert("Ticket is invalid - has expired or already been used");
         ticketNFT.transferFrom(alice, bob, 1);
     }
@@ -269,7 +271,7 @@ contract SetUsedNFTTest is BaseTicketNFTTest {
     }
 
     function testSetUsedWithExpiredTicket() public {
-        vm.warp(10 days + 1 minutes);
+        vm.warp(EXPIRY_DURATION + 1 minutes);
         vm.expectRevert("Ticket is invalid - has expired or already been used");
         ticketNFT.setUsed(1);
     }
@@ -311,7 +313,7 @@ contract IsExpiredOrUsedNFTTest is BaseTicketNFTTest {
     }
 
     function testIsExpiredOrUsedWithExpiredTicket() public {
-        vm.warp(10 days + 1 minutes);
+        vm.warp(EXPIRY_DURATION + 1 minutes);
         assertTrue(ticketNFT.isExpiredOrUsed(1));
     }
 
