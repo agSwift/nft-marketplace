@@ -71,8 +71,8 @@ contract SecondaryMarket is ISecondaryMarket {
         );
         purchaseToken.transferFrom(msg.sender, primaryMarket.admin(), fee);
 
-        ticketNFT.transferFrom(address(this), msg.sender, ticketID);
         ticketNFT.updateHolderName(ticketID, name);
+        ticketNFT.transferFrom(address(this), msg.sender, ticketID);
 
         delete _ticketListings[ticketID];
         emit Purchase(msg.sender, ticketID, listingInfo.price, name);
